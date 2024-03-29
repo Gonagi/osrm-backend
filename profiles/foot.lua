@@ -242,7 +242,7 @@ function process_way(profile, way, result)
 
   -- 거주자 도로 가중치
   if data.highway == 'residential' or data.highway == 'living_street' then
-    table.insert(result.weights, 1000) -- Increase weight by 1000
+    result.weight = result.weight + 1000 -- Increase weight by 1000
   end
 
   WayHandlers.run(profile, way, result, data, handlers)
