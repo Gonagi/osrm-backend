@@ -82,9 +82,9 @@ function setup()
         tertiary        = walking_speed,
         tertiary_link   = walking_speed,
         unclassified    = walking_speed,
-        residential     = walking_speed*0.75,
+        residential     = walking_speed,
         road            = walking_speed,
-        living_street   = walking_speed*0.75,
+        living_street   = walking_speed,
         service         = walking_speed,
         track           = walking_speed,
         path            = walking_speed,
@@ -239,6 +239,11 @@ function process_way(profile, way, result)
     -- set weight properties of the way
     WayHandlers.weights
   }
+
+  -- 거주자 도로 가중치
+  if data.highway == 'residential' or data.highway == 'living_street' then
+    table.insert(result.weights, 1000) -- Increase weight by 1000
+  end
 
   WayHandlers.run(profile, way, result, data, handlers)
 end
