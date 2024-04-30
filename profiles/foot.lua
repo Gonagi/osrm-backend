@@ -14,7 +14,7 @@ function setup()
       weight_name                   = 'duration',
       max_speed_for_map_matching    = 40/3.6, -- kmph -> m/s
       call_tagless_node_function    = false,
-      traffic_light_penalty         = 4,
+      traffic_light_penalty         = 2,
       u_turn_penalty                = 2,
       continue_straight_at_waypoint = false,
       use_turn_restrictions         = false,
@@ -239,11 +239,6 @@ function process_way(profile, way, result)
     -- set weight properties of the way
     WayHandlers.weights
   }
-
-  -- 거주자 도로 가중치
-  if data.highway == 'residential' or data.highway == 'living_street' then
-    result.weight = result.weight + 1000 -- Increase weight by 1000
-  end
 
   WayHandlers.run(profile, way, result, data, handlers)
 end
