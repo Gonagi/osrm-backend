@@ -16,6 +16,7 @@ function setup()
       call_tagless_node_function    = false,
       traffic_light_penalty         = 2,
       u_turn_penalty                = 2,
+      rain_penalty                  = 500,
       continue_straight_at_waypoint = false,
       use_turn_restrictions         = false,
     },
@@ -28,6 +29,13 @@ function setup()
       'yes',
       'wall',
       'fence'
+    },
+
+    tunnel_blacklist = Set {
+      'no',
+      'culvert', -- 길 아래 수로
+      'flooded', -- 홍수 방지 수로
+      'avalanche_protector' -- 산사태 방지 터널
     },
 
     access_tag_whitelist = Set {
@@ -52,6 +60,8 @@ function setup()
     construction_whitelist = Set {},
 
     access_tags_hierarchy = Sequence {
+      'tunnel',
+      'covered',
       'foot',
       'access'
     },
@@ -91,10 +101,7 @@ function setup()
         steps           = walking_speed,
         pedestrian      = walking_speed,
         footway         = walking_speed,
-        pier            = walking_speed,
-        tunnel          = walking_speed * 1.4,
-        covered         = walking_speed * 1.4,
-        shelter         = walking_speed * 1.4
+        pier            = walking_speed
       },
 
       railway = {
@@ -103,7 +110,8 @@ function setup()
 
       amenity = {
         parking         = walking_speed,
-        parking_entrance= walking_speed
+        parking_entrance= walking_speed,
+        covered         = walking_speed * 1.2
       },
 
       man_made = {
@@ -112,6 +120,22 @@ function setup()
 
       leisure = {
         track           = walking_speed
+      },
+
+      -- 터널 속성 가진 길의 속도 증가
+      tunnel = {
+        yes             = walking_speed * 1.2,
+        covered         = walking_speed * 1.2,
+        building_passage= walking_speed * 1.2
+      },
+
+      -- covered 속성 가진 길의 속도 증가
+      covered = {
+        yes             = walking_speed * 1.2,
+        booth           = walking_speed * 1.2,
+        arcade          = walking_speed * 1.2,
+        building_passage= walking_speed * 1.2,
+        roof            = walking_speed * 1.2,
       }
     },
 
@@ -243,6 +267,31 @@ function process_way(profile, way, result)
     WayHandlers.weights
   }
 
+  local other_tags = way:get_value_by_key("other_tags")
+  local check = 0
+
+  if other_tags then
+    local tags = parse_other_tags(other_tags)  
+     -- 사람이 지나갈 수 있는 터널 
+    if tags["tunnel"] and not profile.tunnel_blacklist[tags["tunnel"]] then
+      check = check + 1
+    end
+
+    -- 객체가 무언가로 덮여 있는지 나타내는 tag
+    -- 부스, 아치형 지붕, 가로수, 지붕있는 통행로, 지붕, ...
+    if tags["covered"] == "yes" then
+      check = check + 1
+    end
+  end
+
+  -- 해당 태그(tunnel, covered)가 없는 길의 가중치 증가
+  -- 소요시간 증가, 속도 감소
+  if check == 0 then
+    result.duration = result.duration + profile.properties.rain_penalty
+    result.forward_speed = result.forward_speed * 0.6
+    result.backward_speed = result.backward_speed * 0.6
+  end
+
   WayHandlers.run(profile, way, result, data, handlers)
 end
 
@@ -263,6 +312,19 @@ function process_turn (profile, turn)
       end
   end
 end
+
+-- 태그 문자열 파싱하는 함수
+-- 태그 문자열은
+-- "tunnel"=>"building_passage"
+-- "covered"=>"yes"와 같은 형식으로 이루어져 있음
+function parse_other_tags(other_tags)
+  local tags = {}
+  for key, value in string.gmatch(other_tags, "\"(.-)\"=>\"(.-)\"") do
+      tags[key] = value
+  end
+  return tags
+end
+
 
 return {
   setup = setup,
